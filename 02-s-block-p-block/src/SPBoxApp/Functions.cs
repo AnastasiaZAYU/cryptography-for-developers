@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace Boxes
+namespace SPBoxApp
 {
     public class Functions
     {
@@ -45,9 +43,9 @@ namespace Boxes
 
         public List<int> S_box(List<int> a) //функції для прямого перетворення за алгоритмом S-блоку
         {
-            for (int i = 0; i < a.Count; i++) 
+            for (int i = 0; i < a.Count; i++)
             {
-                if (i % 2 == 0)                   
+                if (i % 2 == 0)
                     a[i] = s0[a[i]]; //заміна значення перших 4 бітів блоку на відповідну йому константу з таблиці підстановки s0
                 else
                     a[i] = s1[a[i]]; //заміна значення останніх 4 бітів блоку на відповідну йому константу з таблиці підстановки s1
@@ -75,7 +73,7 @@ namespace Boxes
             string str, shuffled;
             if (a.Count % 2 != 0) //доповнення повідомлення 0 до бітової довжини кратної 8
                 a.Insert(0, 0);
-            for (int i = 0; i < a.Count; i+=2)
+            for (int i = 0; i < a.Count; i += 2)
             {
                 str = Convert.ToString(a[i] * 16 + a[i + 1], 2).PadLeft(8, '0'); //вилучення блоку довжини 8 бітів
                 shuffled = "";
