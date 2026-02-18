@@ -6,40 +6,63 @@ namespace SPBoxApp
     {
         static void Main(string[] args)
         {
-            var f = new Functions();
-            List<int> mes = new List<int>(new int[2]);
-            bool prog = true;
-            int r = 0;
-            while (prog == true)
+            var fn = new Functions();
+            byte[] message = Array.Empty<byte>();
+
+            Console.WriteLine("========== Cryptography SP-Box Tool ==========" +
+                "\n0 - Input message (HEX)" +
+                "\n1 - Forward S-Box transformation" +
+                "\n2 - Inverse S-Box transformation" +
+                "\n3 - Forward P-Box transformation" +
+                "\n4 - Inverse P-Box transformation" +
+                "\nAny other key - Exit");
+
+            while (true)
             {
-                Console.WriteLine("Натиснiть “0” - щоб ввести повiдомлення в HEX;" +
-                    "\nнатиснiть “1” - щоб застосувати пряме перетворення з S-блок до повiдомлення;" +
-                    "\nнатиснiть “2” - щоб застосувати зворотнє перетворення з S-блок до повiдомлення;" +
-                    "\nнатиснiть “3” - щоб застосувати пряме перетворення з P-блок до повiдомлення;" +
-                    "\nнатиснiть “4” - щоб застосувати зворотнє перетворення з P-блок до повiдомлення;" +
-                    "\nнатиснiсть будь-який iнший символ - щоб завершити роботу.");
-                r = int.Parse(Console.ReadLine());
-                switch (r)
+
+                Console.Write("\nSelect option: ");
+                string input = Console.ReadLine() ?? string.Empty;
+
+                try
                 {
-                    case 0:
-                        string s = Console.ReadLine();
-                        mes = f.Input(s);
-                        break;
-                    case 1:
-                        mes = f.S_box(mes);
-                        break;
-                    case 2:
-                        mes = f.S_box_inv(mes);
-                        break;
-                    case 3:
-                        mes = f.P_box(mes);
-                        break;
-                    case 4:
-                        mes = f.P_box_inv(mes);
-                        break;
-                    default:
-                        prog = false;
-                        break;
+                    if (new[] { "1", "2", "3", "4" }.Contains(input) && message.Length == 0)
+                        throw new InvalidOperationException("No message loaded. Please input a message first.");
+
+                    switch (input)
+                    {
+                        case "0":
+                            Console.Write("Enter HEX string: ");
+                            message = fn.Input(Console.ReadLine());
+                            fn.Print(message, "Loaded");
+                            break;
+
+                        case "1":
+                            fn.S_box(message);
+                            fn.Print(message, "S-Box Forward");
+                            break;
+
+                        case "2":
+                            fn.S_box(message, inverse: true);
+                            fn.Print(message, "S-Box Inverse");
+                            break;
+
+                        case "3":
+                            fn.P_box(message);
+                            fn.Print(message, "P-Box Forward");
+                            break;
+
+                        case "4":
+                            fn.P_box(message, inverse: true);
+                            fn.Print(message, "P-Box Inverse");
+                            break;
+
+                        default:
+                            return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
                 }
             }
         }

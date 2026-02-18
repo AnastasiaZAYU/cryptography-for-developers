@@ -1,110 +1,100 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
+using System.Security.Cryptography;
 
 namespace SPBoxApp
 {
     public class Functions
     {
-        Random rnd = new Random();
-        List<int> s0 = Enumerable.Range(0, 16).ToList();
-        List<int> s1 = Enumerable.Range(0, 16).ToList();
-        List<int> p = Enumerable.Range(0, 8).ToList();
+        // Substitution tables (S-Boxes) for high and low nibbles (4 bits each)
+        private readonly byte[] _s0 = new byte[16];
+        private readonly byte[] _s1 = new byte[16];
+        // Permutation table (P-Box) for 8-bit block
+        private readonly byte[] _pBox = new byte[8];
+
+        //Inverse lookup tables for decryption
+        private readonly byte[] _s0Inv = new byte[16];
+        private readonly byte[] _s1Inv = new byte[16];
+        private readonly byte[] _pBoxInv = new byte[8];
 
         public Functions()
         {
-            s0 = s0.OrderBy(x => rnd.Next()).ToList(); //створення таблиці підстановки для перших 4 бітів блоку
-            s1 = s1.OrderBy(x => rnd.Next()).ToList(); //створення таблиці підстановки для останніх 4 бітів блоку
-            p = p.OrderBy(x => rnd.Next()).ToList(); //створення таблиці перестановки для 8-бітного блоку
+            // Initialize and shuffle transformation tables
+            InitializeTables(_s0);
+            InitializeTables(_s1);
+            InitializeTables(_pBox);
+
+            // Generate inverse tables for reverse transformations
+            CreateInverseTable(_s0,_s0Inv);
+            CreateInverseTable(_s1, _s1Inv);
+            CreateInverseTable(_pBox, _pBoxInv);
         }
 
-        public List<int> Input(string mes) //функція, яка переводить HEX у DEC 
+        private void InitializeTables(byte[] table)
         {
-            List<int> list = new List<int>();
-            for (int i = 0; i < mes.Length; i++)
-                list.Add(Convert.ToInt32(Convert.ToString(mes[i]), 16));
-            return list;
-        }
-
-        public void Print(List<int> list) //функція, яка виводить HEX повідомлення 
-        {
-            for (int i = 0; i < list.Count; i++)
-                Console.Write(Convert.ToString(list[i], 16));
-            Console.WriteLine();
-        }
-
-        public string Output(List<int> list) //функція, яка повертає HEX повідомлення 
-        {
-            string mes = "";
-            for (int i = 0; i < list.Count; i++)
-                mes += Convert.ToString(list[i], 16);
-            return mes;
-        }
-
-        public List<int> S_box(List<int> a) //функції для прямого перетворення за алгоритмом S-блоку
-        {
-            for (int i = 0; i < a.Count; i++)
+            for (int i = 0; i < table.Length; i++)
             {
-                if (i % 2 == 0)
-                    a[i] = s0[a[i]]; //заміна значення перших 4 бітів блоку на відповідну йому константу з таблиці підстановки s0
-                else
-                    a[i] = s1[a[i]]; //заміна значення останніх 4 бітів блоку на відповідну йому константу з таблиці підстановки s1
+                table[i] = (byte)i;
             }
-            Print(a);
-            return a;
+            // Fisher-Yates shuffle algorithm for unbiased permutation
+            for (int i = table.Length - 1; i > 0; i--)
+            {
+                int j = RandomNumberGenerator.GetInt32(i + 1);
+                (table[i], table[j]) = (table[j], table[i]);
+            }
         }
 
-        public List<int> S_box_inv(List<int> a) //функції для зворотного перетворення за алгоритмом S-блоку
+        private void CreateInverseTable(byte[] source, byte[] destination)
         {
-            for (int i = 0; i < a.Count; i++)
+            for (int i = 0; i < source.Length; i++)
             {
-                if (i % 2 == 0)
-                    a[i] = s0.IndexOf(a[i]); //відновлення значення перших 4 бітів блоку за відповідною йому константою з таблиці підстановки s0
-                else
-                    a[i] = s1.IndexOf(a[i]); //відновлення значення останніх 4 бітів блоку за відповідною йому константою з таблиці підстановки s0
+                destination[source[i]] = (byte)i;
             }
-            Print(a);
-            return a;
         }
 
-        public List<int> P_box(List<int> a) //функції для прямого перетворення за алгоритмом P-блоку
-        {
-            int n;
-            string str, shuffled;
-            if (a.Count % 2 != 0) //доповнення повідомлення 0 до бітової довжини кратної 8
-                a.Insert(0, 0);
-            for (int i = 0; i < a.Count; i += 2)
-            {
-                str = Convert.ToString(a[i] * 16 + a[i + 1], 2).PadLeft(8, '0'); //вилучення блоку довжини 8 бітів
-                shuffled = "";
-                for (int j = 0; j < str.Length; j++)
-                    shuffled += str[p[j]]; //перестановка бітів блоку за правилом з таблиці p
-                n = Convert.ToInt32(shuffled, 2); //переведення числа з BIN у DEC
-                a[i] = n / 16;
-                a[i + 1] = n % 16;
-            }
-            Print(a);
-            return a;
+        public byte[] Input(string? hex)
+        { 
+            if (string.IsNullOrWhiteSpace(hex))
+                throw new ArgumentException("Input cannot be empty. Please enter a valid HEX string.");
+            return Convert.FromHexString(hex);
         }
 
-        public List<int> P_box_inv(List<int> a) //функції для зворотного перетворення за алгоритмом P-блоку
+        public void Print(ReadOnlySpan<byte> data, string label = "State") =>
+            Console.WriteLine($"{label}: {Convert.ToHexString(data)}");
+        
+        public void S_box(Span<byte> data, bool inverse = false)
         {
-            int n;
-            string str, shuffled;
-            if (a.Count % 2 != 0) //доповнення повідомлення 0 до бітової довжини кратної 8
-                a.Insert(0, 0);
-            for (int i = 0; i < a.Count; i += 2)
+            ReadOnlySpan<byte> s0Table = inverse ? _s0Inv : _s0;
+            ReadOnlySpan<byte> s1Table = inverse ? _s1Inv : _s1;
+
+            for (int i = 0; i < data.Length; i++)
             {
-                str = Convert.ToString(a[i] * 16 + a[i + 1], 2).PadLeft(8, '0'); //вилучення блоку довжини 8 бітів
-                shuffled = "";
-                for (int j = 0; j < str.Length; j++)
-                    shuffled += str[p.IndexOf(j)]; //обернена перестановка бітів блоку за правилом з таблиці p
-                n = Convert.ToInt32(shuffled, 2); //переведення числа з BIN у DEC
-                a[i] = n / 16;
-                a[i + 1] = n % 16;
+                byte b = data[i];
+                // Hign nibble (bits 7-4) and low nibble (bits 3-0) substitution
+                data[i] = (byte)((s0Table[b >> 4] << 4) | s1Table[b & 0x0F]);
             }
-            Print(a);
-            return a;
+        }
+
+        public void P_box(Span<byte> data, bool inverse = false)
+        {
+            ReadOnlySpan<byte> currentPBox = inverse ? _pBoxInv : _pBox;
+
+            for (int i = 0; i < data.Length; i ++)
+            {
+                byte b = data[i];
+                byte shuffled = 0;
+
+                // Bit-by-bit permutation logic
+                for (int j = 0; j < 8; j++)
+                {
+                    // Extract the bit at specified position and shift it to new position
+                    int bit = (b >> (7 - currentPBox[j])) & 1;
+                    shuffled |= (byte)(bit << (7 - j));
+                }
+                data[i] = shuffled;
+            }
         }
     }
 }
