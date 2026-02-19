@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Security.Cryptography;
-using System.IO;
+using System.Text;
 
-namespace _SHA_1
+namespace Sha1Core
 {
-    public class SHA_1
+    public class Sha1Hasher
     {
         private List<uint> h;
 
@@ -66,7 +63,7 @@ namespace _SHA_1
             }
             return hash;
         }
-        
+
         private void SHA(byte[] list)
         {
             uint[] w = new uint[80];

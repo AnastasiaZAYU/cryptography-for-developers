@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
-namespace _SHA_1
+namespace Sha1Core
 {
-    class Program
+    internal class Program
     {
         static void Main(string[] args)
         {
             Stopwatch stopwatch = new Stopwatch();
-            var sha = new SHA_1();
+            var sha = new Sha1Hasher();
             bool prog = true;
             int r = 0;
             byte[] hash;
