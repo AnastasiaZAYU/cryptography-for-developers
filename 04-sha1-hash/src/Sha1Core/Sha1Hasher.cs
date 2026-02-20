@@ -2,150 +2,159 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Formats.Asn1;
+using System.Numerics;
 
 namespace Sha1Core
 {
     public class Sha1Hasher
     {
-        private List<uint> h;
+        private uint[] _h = new uint[5];
 
-        public void new_H()
+        private readonly byte[] _buffer = new byte[64];
+        private int _bufferLength = 0;
+        private long _totalLength = 0;
+
+        public Sha1Hasher() => Reset();
+
+        // Static helper method for hashing data in one go
+        public static byte[] HashData(ReadOnlySpan<byte> data)
         {
-            h = new List<uint> { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0 };
+            var hasher = new Sha1Hasher();
+            hasher.AppendData(data);
+            return hasher.GetHashAndReset();
         }
 
-        public byte[] CalculateSHA1(string input, bool flag)
+        // Static helper method for hashing a file
+        public static byte[] HashFile(string filePath)
         {
-            byte[] arr = Encoding.UTF8.GetBytes(input);
-            if (flag)
+            using var stream = File.OpenRead(filePath);
+            var hasher = new Sha1Hasher();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
             {
-                new_H();
-                return my_SHA1(arr);
+                hasher.AppendData(buffer.AsSpan(0, bytesRead));
             }
-            return library_SHA1(arr);
+            return hasher.GetHashAndReset();
         }
 
-        public byte[] CalculateSHA1(StreamReader sr, bool flag)
+        public static string ToHexString(byte[] hash) => Convert.ToHexString(hash).ToLower();
+
+        public void Reset()
         {
-            var str = sr.ReadToEnd();
-            byte[] arr = Encoding.UTF8.GetBytes(str);
-            if (flag)
+            _h[0] = 0x67452301;
+            _h[1] = 0xEFCDAB89;
+            _h[2] = 0x98BADCFE;
+            _h[3] = 0x10325476;
+            _h[4] = 0xC3D2E1F0;
+            _bufferLength = 0;
+            _totalLength = 0;
+        }
+
+        public void AppendData(ReadOnlySpan<byte> data)
+        {
+            _totalLength += data.Length;
+
+            while (data.Length > 0)
             {
-                new_H();
-                return my_SHA1(arr);
+                int toCopy = Math.Min(64 - _bufferLength, data.Length);
+                data[..toCopy].CopyTo(_buffer.AsSpan(_bufferLength));
+                _bufferLength += toCopy;
+                data = data[toCopy..];
+
+                if (_bufferLength == 64)
+                {
+                    ProcessBlock(_buffer);
+                    _bufferLength = 0;
+                }
             }
-            return library_SHA1(arr);
         }
 
-        public byte[] CalculateSHA1(BinaryReader br, long len, bool flag)
+        public byte[] GetHashAndReset()
         {
-            var arr = br.ReadBytes((int)len);
-            if (flag)
-            {
-                new_H();
-                return my_SHA1(arr);
-            }
-            return library_SHA1(arr);
-        }
-
-        private byte[] my_SHA1(byte[] arr)
-        {
-            var message = Padding(arr);
-            for (int i = 0; i < message.Count; i += 64)
-                SHA(message.GetRange(i, 64).ToArray());
+            PadMessage();
 
             byte[] hash = new byte[20];
-            for (int i = 0; i < h.Count; i++)
+            for (int i = 0; i < 5; i++)
             {
-                var bytes = BitConverter.GetBytes(h[i]);
-                Array.Reverse(bytes);
-                Array.Copy(bytes, 0, hash, 4 * i, 4);
+                BinaryPrimitives.WriteUInt32BigEndian(hash.AsSpan(i * 4), _h[i]);
             }
+            Reset();
             return hash;
         }
 
-        private void SHA(byte[] list)
+        private void ProcessBlock(ReadOnlySpan<byte> block)
         {
-            uint[] w = new uint[80];
-            for (int t = 0; t < 80; t++)
+            Span<uint> w = stackalloc uint[80];
+
+            for (int t = 0; t < 16; t++)
             {
-                if (t < 16)
-                {
-                    Array.Reverse(list, t * 4, 4);
-                    w[t] = BitConverter.ToUInt32(list, t * 4);
-                }
-                else
-                    w[t] = ShiftLeft(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
+                w[t] = BinaryPrimitives.ReadUInt32BigEndian(block.Slice(t * 4));
+            }
+            for (int t = 16; t < 80; t++)
+            {
+                w[t] = BitOperations.RotateLeft(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
             }
 
-            var a = h[0];
-            var b = h[1];
-            var c = h[2];
-            var d = h[3];
-            var e = h[4];
+            uint a = _h[0];
+            uint b = _h[1];
+            uint c = _h[2];
+            uint d = _h[3];
+            uint e = _h[4];
 
-            uint temp;
             for (int i = 0; i < 80; i++)
             {
-                temp = ShiftLeft(a, 5) + F(i, b, c, d) + e + w[i];
+                uint f, k;
+                if (i < 20)
+                {
+                    f = (b & c) | ((~b) & d);
+                    k = 0x5A827999;
+                }
+                else if (i < 40)
+                {
+                    f = b ^ c ^ d;
+                    k = 0x6ED9EBA1;
+                }
+                else if (i < 60)
+                {
+                    f = (b & c) | (b & d) | (c & d);
+                    k = 0x8F1BBCDC;
+                }
+                else
+                {
+                    f = b ^ c ^ d;
+                    k = 0xCA62C1D6;
+                }
+
+                uint temp = BitOperations.RotateLeft(a, 5) + f + e + k + w[i];
                 e = d;
                 d = c;
-                c = ShiftLeft(b, 30);
+                c = BitOperations.RotateLeft(b, 30);
                 b = a;
                 a = temp;
             }
-
-            h[0] += a;
-            h[1] += b;
-            h[2] += c;
-            h[3] += d;
-            h[4] += e;
+            _h[0] += a;
+            _h[1] += b;
+            _h[2] += c;
+            _h[3] += d;
+            _h[4] += e;
         }
 
-        private uint ShiftLeft(uint word, int n)
+        private void PadMessage()
         {
-            return (word << n) | (word >> (32 - n));
-        }
-
-        private uint F(int t, uint m, uint l, uint k)
-        {
-            if (t < 20)
-                return ((m & l) | ((~m) & k)) + 0x5A827999;
-            else if (t < 40)
-                return (m ^ l ^ k) + 0x6ED9EBA1;
-            else if (t < 60)
-                return ((m & l) | (m & k) | (l & k)) + 0x8F1BBCDC;
-            else
-                return (m ^ l ^ k) + 0xCA62C1D6;
-        }
-
-        private List<byte> Padding(byte[] array)
-        {
-            byte[] len = BitConverter.GetBytes((ulong)array.Length * 8);
-            Array.Reverse(len);
-            List<byte> padbyte = new List<byte>(array);
-            padbyte.Add(0x80);
-            while (padbyte.Count % 64 != 56)
-                padbyte.Add(0x0);
-            padbyte.AddRange(len);
-            return padbyte;
-        }
-
-        private byte[] library_SHA1(byte[] arr)
-        {
-            using (SHA1 sha1 = new SHA1CryptoServiceProvider())
+            long bitLength = _totalLength * 8;
+            Span<byte> firstPadByte = stackalloc byte[1] { 0x80 };
+            AppendData(firstPadByte);
+            while (_bufferLength != 56)
             {
-                byte[] hash = sha1.ComputeHash(arr);
-                return hash;
+                AppendData(stackalloc byte[1] { 0x00 });
             }
-        }
-
-        public string GetHex(byte[] hash)
-        {
-            StringBuilder sb = new StringBuilder();
-            foreach (byte b in hash)
-                sb.Append(b.ToString("x2"));
-            return sb.ToString();
+            Span<byte> lengthBytes = stackalloc byte[8];
+            BinaryPrimitives.WriteInt64BigEndian(lengthBytes, bitLength);
+            AppendData(lengthBytes);
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Text;
+using System.Diagnostics;
+using System.IO;
 
 namespace Sha1Core
 {
@@ -6,91 +9,47 @@ namespace Sha1Core
     {
         static void Main(string[] args)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            var sha = new Sha1Hasher();
-            bool prog = true;
-            int r = 0;
-            byte[] hash;
-            string s;
-            long len;
-            StreamReader sr;
-            BinaryReader br;
-            TimeSpan elapsedTime;
-            Process currentProcess;
-            long workingSet;
-            long privateMemory;
-            while (prog == true)
+            Console.OutputEncoding = Encoding.UTF8;
+
+            Console.WriteLine("========= SHA-1 Hahsing Tool =========" +
+                "\n1 - Hash text string" +
+                "\n2 - Hash file" +
+                "\nAny other key - Exit");
+
+            while (true)
             {
-                Console.WriteLine("Натиснiть “0” - щоб отримати геш-значення тексту, введеного з консолi;" +
-                    "\nнатиснiть “1” - щоб отримати геш-значення тексту, зчитаного з файлу;" +
-                    "\nнатиснiть “2” - щоб отримати геш-значення тексту, зчитаного з бiнарного файлу;" +
-                    "\nнатиснiть “3” - щоб за допомогою бiблiотеки отримати геш-значення тексту, введеного з консолi;" +
-                    "\nнатиснiть “4” - щоб за допомогою бiблiотеки отримати геш-значення тексту, зчитаного з файлу;" +
-                    "\nнатиснiть “5” - щоб за допомогою бiблiотеки отримати геш-значення тексту, зчитаного з бiнарного файлу;" +
-                    "\nнатиснiсть будь-який iнший символ - щоб завершити роботу.");
-                r = int.Parse(Console.ReadLine());
-                switch (r)
+                Console.Write("Select option: ");
+                string input = Console.ReadLine() ?? string.Empty;
+
+                try 
                 {
-                    case 0:
-                        s = Console.ReadLine();
-                        hash = sha.CalculateSHA1(s, true);
-                        Console.WriteLine(sha.GetHex(hash));
+                    if (input == "1")
+                    {
+                        Console.Write("Enter text: ");
+                        string text = Console.ReadLine() ?? string.Empty;
+                        byte[] data = System.Text.Encoding.UTF8.GetBytes(text);
+                        byte[] hash = Sha1Hasher.HashData(data);
+                        Console.WriteLine($"SHA-1 Hash: {Sha1Hasher.ToHexString(hash)}");
+                    }
+                    else if (input == "2")
+                    {
+                        Console.Write("Enter file path: ");
+                        string filePath = Console.ReadLine() ?? string.Empty;
+                        if (!File.Exists(filePath))
+                            throw new FileNotFoundException("File not found!");
+                        byte[] hash = Sha1Hasher.HashFile(filePath);
+                        Console.WriteLine($"SHA-1 Hash: {Sha1Hasher.ToHexString(hash)}");
+                    }
+                    else
+                    {
                         break;
-                    case 1:
-                        sr = File.OpenText("text.txt");
-                        //stopwatch.Start();
-                        //currentProcess = Process.GetCurrentProcess();
-                        hash = sha.CalculateSHA1(sr, true);
-                        //stopwatch.Stop();
-                        //workingSet = currentProcess.WorkingSet64;
-                        //privateMemory = currentProcess.PrivateMemorySize64;
-                        Console.WriteLine(sha.GetHex(hash));
-                        //elapsedTime = stopwatch.Elapsed;
-                        //Console.WriteLine("Час виконання функції: " + elapsedTime.ToString());
-                        //Console.WriteLine("Обсяг використаної оперативної пам'ятi: " + workingSet + " байт");
-                        //Console.WriteLine("Приватний обсяг пам'ятi: " + privateMemory + " байт");
-                        sr.Close();
-                        break;
-                    case 2:
-                        br = new BinaryReader(File.Open("bintext.bin", FileMode.Open));
-                        len = new FileInfo("bintext.bin").Length;
-                        hash = sha.CalculateSHA1(br, len, true);
-                        Console.WriteLine(sha.GetHex(hash));
-                        br.Close();
-                        break;
-                    case 3:
-                        s = Console.ReadLine();
-                        hash = sha.CalculateSHA1(s, false);
-                        Console.WriteLine(sha.GetHex(hash));
-                        break;
-                    case 4:
-                        sr = File.OpenText("text.txt");
-                        //stopwatch.Start();
-                        //currentProcess = Process.GetCurrentProcess();
-                        hash = sha.CalculateSHA1(sr, false);
-                        //stopwatch.Stop();
-                        //workingSet = currentProcess.WorkingSet64;
-                        //privateMemory = currentProcess.PrivateMemorySize64;
-                        Console.WriteLine(sha.GetHex(hash));
-                        //elapsedTime = stopwatch.Elapsed;
-                        //Console.WriteLine("Час виконання функції: " + elapsedTime.ToString());
-                        //Console.WriteLine("Обсяг використаної оперативної пам'ятi: " + workingSet + " байт");
-                        //Console.WriteLine("Приватний обсяг пам'ятi: " + privateMemory + " байт");
-                        sr.Close();
-                        break;
-                    case 5:
-                        br = new BinaryReader(File.Open("bintext.bin", FileMode.Open));
-                        len = new FileInfo("bintext.bin").Length;
-                        hash = sha.CalculateSHA1(br, len, false);
-                        Console.WriteLine(sha.GetHex(hash));
-                        br.Close();
-                        break;
-                    default:
-                        prog = false;
-                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
                 }
             }
-            Console.ReadKey();
         }
     }
 }
