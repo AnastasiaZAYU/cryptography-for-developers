@@ -2,6 +2,7 @@
 using System.Text;
 using System.Diagnostics;
 using System.IO;
+using BenchmarkDotNet.Running;
 
 namespace Sha1Core
 {
@@ -14,11 +15,12 @@ namespace Sha1Core
             Console.WriteLine("========= SHA-1 Hahsing Tool =========" +
                 "\n1 - Hash text string" +
                 "\n2 - Hash file" +
+                "\n3 - Run Performance Benchmarks" +
                 "\nAny other key - Exit");
 
             while (true)
             {
-                Console.Write("Select option: ");
+                Console.Write("\nSelect option: ");
                 string input = Console.ReadLine() ?? string.Empty;
 
                 try 
@@ -39,6 +41,15 @@ namespace Sha1Core
                             throw new FileNotFoundException("File not found!");
                         byte[] hash = Sha1Hasher.HashFile(filePath);
                         Console.WriteLine($"SHA-1 Hash: {Sha1Hasher.ToHexString(hash)}");
+                    }
+                    else if (input == "3")
+                    {
+                        Console.WriteLine("[!] Running Benchmarks...");
+#if DEBUG
+                        Console.WriteLine("WARNING: Running benchmarks in DEBUG mode will yield inaccurate results. Please switch to RELEASE mode for accurate performance measurements.");
+#endif
+                        BenchmarkRunner.Run<Sha1Benchmarks>();
+                        continue;
                     }
                     else
                     {
