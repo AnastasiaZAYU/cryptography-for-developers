@@ -1,18 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace BigNumbers
+namespace BigArithmetic
 {
-    public class BigNumber
+    public class BigInt
     {
         int w = 16;
         int bt = Convert.ToInt32(Math.Pow(2, 16));
-
-        public BigNumber()
-        {}
 
         //Реалізація власного типу даних великого числа з методами setHex і getHex
 
@@ -445,6 +440,5 @@ namespace BigNumbers
                 a.Add(0);
             return a;
         }
-
     }
 }
