@@ -19,6 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\data\**">
+      <Link>data\%(RecursiveDir)%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

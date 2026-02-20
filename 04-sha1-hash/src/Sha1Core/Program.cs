@@ -35,8 +35,11 @@ namespace Sha1Core
                     }
                     else if (input == "2")
                     {
-                        Console.Write("Enter file path: ");
-                        string filePath = Console.ReadLine() ?? string.Empty;
+                        Console.Write("Enter file name (from /data): ");
+                        string fileName = Console.ReadLine() ?? string.Empty;
+
+                        string filePath = Path.Combine(AppContext.BaseDirectory, "data", fileName);
+
                         if (!File.Exists(filePath))
                             throw new FileNotFoundException("File not found!");
                         byte[] hash = Sha1Hasher.HashFile(filePath);

@@ -45,12 +45,14 @@ namespace Sha1Core.Test
         public void HashFile_LargeBinaryFile_MatchesLibrary()
         {
             // Arrange
-            string solutionRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-            string filePath = Path.Combine(solutionRoot, "docs", "testfile.bin");
+            string filePath = Path.Combine(AppContext.BaseDirectory, "data", "testfile.bin");
 
             if (!File.Exists(filePath))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+                string? directory = Path.GetDirectoryName(filePath);
+                if (directory != null)
+                    Directory.CreateDirectory(directory);
+
                 byte[] dummyData = new byte[10 * 1024 * 1024]; // 10 MB of data
                 new Random().NextBytes(dummyData);
                 File.WriteAllBytes(filePath, dummyData);
