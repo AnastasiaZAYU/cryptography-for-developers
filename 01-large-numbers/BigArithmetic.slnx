@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/BigArithmetic/BigArithmetic.csproj" />
+  <Project Path="tests/BigArithmetic.Tests/BigArithmetic.Tests.csproj" Id="80f9a643-fac6-45cf-8a73-ed31ba9870d9" />
 </Solution>
