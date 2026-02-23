@@ -1,444 +1,291 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Globalization;
+using System.Numerics;
 
 namespace BigArithmetic
 {
     public class BigInt
     {
-        int w = 16;
-        int bt = Convert.ToInt32(Math.Pow(2, 16));
+        private readonly uint[] _data;
 
-        //Реалізація власного типу даних великого числа з методами setHex і getHex
-
-        public string getHex(List<int> array)
+        public BigInt(uint[] data)
         {
-            string s = "";
-            string temp;
-            for (int i = 0; i < array.Count; i++)
-            {
-                temp = Convert.ToString(array[i], 16);
-                while (temp.Length < 4) temp = "0" + temp;
-                s = temp + s;
-            }
-            if (s[0] == '0') s = s.TrimStart('0');
-            if (String.IsNullOrEmpty(s)) s = "0";
-            return s;
+            _data = data ?? throw new ArgumentNullException(nameof(data));
         }
 
-        public List<int> setHex(string s)
+        public BigInt() : this([0]) { }
+
+        // Implementation of setHex and getHex methods
+
+        public static BigInt FromHex(string hex)
         {
-            string temp;
-            while (s.Length % 4 != 0) s = "0" + s;
-            List<int> array = new List<int>();
-            for (int i = 0; i < s.Length / 4; i++)
+            if (string.IsNullOrEmpty(hex))
+                return new BigInt();
+
+            ReadOnlySpan<char> hexSpan = hex.AsSpan().TrimStart('0');
+            if (hexSpan.Length == 0)
+                return new BigInt();
+
+            int blockSize = 8;
+            int numBlocks = (hexSpan.Length + blockSize - 1) / blockSize;
+            uint[] data = new uint[numBlocks];
+
+            for (int i = 0; i < numBlocks; i++)
             {
-                temp = "";
-                for (int j = 0; j < 4; j++)
-                    temp = temp + s[i * 4 + j];
-                temp = Convert.ToString(Convert.ToInt32(temp, 16), 10);
-                array.Add(Convert.ToInt32(temp));
+                int end = hexSpan.Length - i * blockSize;
+                int start = Math.Max(0, end - blockSize);
+                data[i] = uint.Parse(hexSpan.Slice(start, end - start), NumberStyles.HexNumber);
             }
-            array.Reverse();
-            return array;
+            return new BigInt(data);
         }
 
-        //Реалізація побітових операцій для власного типу даних
-
-        public List<int> INV(List<int> array)
+        public string ToHex()
         {
-            string bin;
-            for (int i = 0; i < array.Count; i++)
+            if (IsZero(this))
+                return "0";
+
+            StringBuilder sb = new();
+            for (int i = _data.Length - 1; i >= 0; i--)
             {
-                bin = Convert.ToString(array[i], 2);
-                if (bin.Length < 16 & i != array.Count - 1)
-                    bin = bin.PadLeft(16, '0');
-                bin = bin.Replace("1", "2");
-                bin = bin.Replace("0", "1");
-                bin = bin.Replace("2", "0");
-                array[i] = Convert.ToInt32(bin, 2);
+                string format = (i == _data.Length - 1) ? "X" : "X8";
+                sb.Append(_data[i].ToString(format));
             }
-            return array;
+            return sb.ToString();
         }
 
-        public List<int> XOR(List<int> list1, List<int> list2)
+        // Implementation of bitwise operations
+
+        public static BigInt operator ^(BigInt a, BigInt b) => BitwiseOp(a, b, (x, y) => x ^ y);
+        public static BigInt operator |(BigInt a, BigInt b) => BitwiseOp(a, b, (x, y) => x | y);
+        public static BigInt operator &(BigInt a, BigInt b) => BitwiseOp(a, b, (x, y) => x & y);
+        public static BigInt operator ~(BigInt a)
         {
-            List<int> a = new List<int>();
-            List<int> b = new List<int>();
-            List<int> c = new List<int>();
-            if (list1.Count < list2.Count)
+            uint[] resultData = new uint[a._data.Length];
+            for (int i = 0; i < a._data.Length; i++)
             {
-                b = list1.ToList();
-                a = list2.ToList();
+                resultData[i] = ~a._data[i];
             }
-            else
+            return Trim(new BigInt(resultData));
+        }
+
+        private static BigInt BitwiseOp(BigInt a, BigInt b, Func<uint, uint, uint> op)
+        {
+            int maxLength = Math.Max(a._data.Length, b._data.Length);
+            uint[] resultData = new uint[maxLength];
+            for (int i = 0; i < maxLength; i++)
             {
-                a = list1.ToList();
-                b = list2.ToList();
+                uint aVal = i < a._data.Length ? a._data[i] : 0;
+                uint bVal = i < b._data.Length ? b._data[i] : 0;
+                resultData[i] = op(aVal, bVal);
             }
-            string bin_a, bin_b, bin_c;
-            for (int i = 0; i < b.Count; i++)
+            return Trim(new BigInt(resultData));
+        }
+
+        public static BigInt operator <<(BigInt a, int count)
+        {
+            if (count == 0 || IsZero(a))
+                return a;
+            int blockShift = count / 32;
+            int bitShift = count % 32;
+
+            uint[] resultData = new uint[a._data.Length + blockShift + 1];
+            for (int i = 0; i < a._data.Length; i++)
             {
-                bin_c = "";
-                bin_a = Convert.ToString(a[i], 2);
-                bin_b = Convert.ToString(b[i], 2);
-                if (bin_a.Length < bin_b.Length)
-                    bin_a = bin_a.PadLeft(bin_b.Length, '0');
-                if (bin_a.Length > bin_b.Length)
-                    bin_b = bin_b.PadLeft(bin_a.Length, '0');
-                for (int j = 0; j < bin_a.Length; j++)
+                ulong shifted = (ulong)a._data[i] << bitShift;
+                resultData[i + blockShift] |= (uint)(shifted & uint.MaxValue);
+                resultData[i + blockShift + 1] |= (uint)(shifted >> 32);
+            }
+            return Trim(new BigInt(resultData));
+        }
+
+        public static BigInt operator >>(BigInt a, int count)
+        {
+            if (count == 0 || IsZero(a))
+                return a;
+            int blockShift = count / 32;
+            int bitShift = count % 32;
+            if (blockShift >= a._data.Length)
+                return new BigInt();
+
+            uint[] resultData = new uint[a._data.Length - blockShift];
+            for (int i = blockShift; i < a._data.Length; i++)
+            {
+                resultData[i - blockShift] = a._data[i] >> bitShift;
+                if (bitShift > 0 && i + 1 < a._data.Length)
                 {
-                    if (bin_a[j] == bin_b[j])
-                        bin_c += "0";
-                    else bin_c += "1";
+                    resultData[i - blockShift] |= a._data[i + 1] << (32 - bitShift);
                 }
-                c.Add(Convert.ToInt32(bin_c, 2));
             }
-            return c;
+            return Trim(new BigInt(resultData));
         }
 
-        public List<int> OR(List<int> list1, List<int> list2)
+        // Implementation of arithmetic operations
+
+        public static BigInt operator +(BigInt a, BigInt b)
         {
-            List<int> a = new List<int>();
-            List<int> b = new List<int>();
-            List<int> c = new List<int>();
-            if (list1.Count < list2.Count)
+            int maxLength = Math.Max(a._data.Length, b._data.Length);
+            uint[] resultData = new uint[maxLength + 1];
+            ulong carry = 0;
+
+            for (int i = 0; i < maxLength; i++)
             {
-                b = list1.ToList();
-                a = list2.ToList();
+                ulong aVal = i < a._data.Length ? a._data[i] : 0;
+                ulong bVal = i < b._data.Length ? b._data[i] : 0;
+                ulong sum = aVal + bVal + carry;
+                resultData[i] = (uint)(sum);
+                carry = sum >> 32;
             }
-            else
+            resultData[maxLength] = (uint)carry;
+            return Trim(new BigInt(resultData));
+        }
+
+        public static BigInt operator -(BigInt a, BigInt b)
+        {
+            if (Compare(a, b) < 0)
+                throw new InvalidOperationException("Subtraction would result in a negative value.");
+
+            uint[] resultData = new uint[a._data.Length];
+            long borrow = 0;
+
+            for (int i = 0; i < a._data.Length; i++)
             {
-                a = list1.ToList();
-                b = list2.ToList();
-            }
-            string bin_a, bin_b, bin_c;
-            for (int i = 0; i < b.Count; i++)
-            {
-                bin_c = "";
-                bin_a = Convert.ToString(a[i], 2);
-                bin_b = Convert.ToString(b[i], 2);
-                if (bin_a.Length < bin_b.Length)
-                    bin_a = bin_a.PadLeft(bin_b.Length, '0');
-                if (bin_a.Length > bin_b.Length)
-                    bin_b = bin_b.PadLeft(bin_a.Length, '0');
-                for (int j = 0; j < bin_a.Length; j++)
+                long aVal = a._data[i];
+                long bVal = i < b._data.Length ? b._data[i] : 0;
+                long sub = aVal - bVal - borrow;
+
+                if (sub < 0)
                 {
-                    if (bin_a[j] == '0' & bin_b[j] == '0')
-                        bin_c += "0";
-                    else bin_c += "1";
-                }
-                c.Add(Convert.ToInt32(bin_c, 2));
-            }
-            return c;
-        }
-
-        public List<int> AND(List<int> list1, List<int> list2)
-        {
-            List<int> a = new List<int>();
-            List<int> b = new List<int>();
-            List<int> c = new List<int>();
-            if (list1.Count < list2.Count)
-            {
-                b = list1.ToList();
-                a = list2.ToList();
-            }
-            else
-            {
-                a = list1.ToList();
-                b = list2.ToList();
-            }
-            string bin_a, bin_b, bin_c;
-            for (int i = 0; i < b.Count; i++)
-            {
-                bin_c = "";
-                bin_a = Convert.ToString(a[i], 2);
-                bin_b = Convert.ToString(b[i], 2);
-                if (bin_a.Length < bin_b.Length)
-                    bin_a = bin_a.PadLeft(bin_b.Length, '0');
-                if (bin_a.Length > bin_b.Length)
-                    bin_b = bin_b.PadLeft(bin_a.Length, '0');
-                for (int j = 0; j < bin_a.Length; j++)
-                {
-                    if (bin_a[j] == '1' & bin_b[j] == '1')
-                        bin_c += "1";
-                    else bin_c += "0";
-                }
-                c.Add(Convert.ToInt32(bin_c, 2));
-            }
-            return c;
-        }
-
-        public List<int> shiftR(List<int> a, int count)
-        {
-            List<int> c = new List<int>();
-            string s = "";
-            for (int i = 0; i < a.Count; i++)
-                s = Convert.ToString(a[i], 2) + s;
-            s = s.Substring(s.Length - count) + s.Remove(s.Length - count);
-            while (s.Length % 16 != 0)
-                s = "0" + s;
-            for (int i = 0; i < s.Length; i += 16)
-            {
-                c.Insert(0, Convert.ToInt32(s.Substring(0, 16), 2));
-                s.Remove(0, 16);
-            }
-            return c;
-        }
-
-        public List<int> shiftL(List<int> a, int count)
-        {
-            List<int> c = new List<int>();
-            string s = "";
-            for (int i = 0; i < a.Count; i++)
-                s = Convert.ToString(a[i], 2) + s;
-            s = s.Remove(0, count) + s.Substring(0, count);
-            while (s.Length % 16 != 0)
-                s = "0" + s;
-            for (int i = 0; i < s.Length; i += 16)
-            {
-                c.Insert(0, Convert.ToInt32(s.Substring(0, 16), 2));
-                s.Remove(0, 16);
-            }
-            return c;
-        }
-
-        //Реалізація арифметичних операцій для власного типу даних
-
-        public List<int> ADD(List<int> a1, List<int> b1)
-        {
-            List<int> a = new List<int>();
-            List<int> b = new List<int>();
-            if (a1.Count < b1.Count)
-            {
-                a = b1.ToList();
-                b = a1.ToList();
-            }
-            else
-            {
-                b = b1.ToList();
-                a = a1.ToList();
-            }
-            List<int> c = new List<int>();
-            int carry = 0, temp = 0;
-            int i = 0;
-            for (i = 0; i < b.Count; i++)
-            {
-                temp = a[i] + b[i] + carry;
-                c.Add(temp & (bt - 1));
-                carry = temp >> w;
-            }
-            for (; i < a.Count; i++)
-            {
-                temp = a[i] + carry;
-                c.Add(temp & (bt - 1));
-                carry = temp >> w;
-            }
-            if (carry != 0)
-                c.Add(carry);
-            return c;
-        }
-
-        public List<int> SUB(List<int> a, List<int> b)
-        {
-            a = LongSameSize(a, b.Count);
-            b = LongSameSize(b, a.Count);
-            int size = a.Count;
-            List<int> c = new List<int>();
-            int borrow = 0, temp = 0;
-            for (int i = 0; i < size; i++)
-            {
-                temp = a[i] - b[i] - borrow;
-                if (temp >= 0)
-                {
-                    c.Add(temp);
-                    borrow = 0;
+                    sub += 0x100000000L;
+                    borrow = 1;
                 }
                 else
                 {
-                    c.Add(bt + temp);
-                    borrow = 1;
+                    borrow = 0;
                 }
+                resultData[i] = (uint)sub;
             }
-            a = TrueSize(a);
-            b = TrueSize(b);
-            return TrueSize(c);
+            return Trim(new BigInt(resultData));
         }
 
-        public List<int> MOD(List<int> c, List<int> n)
+        public static BigInt operator *(BigInt a, BigInt b)
         {
-            List<int> m = LongM(n);
-            List<int> q = KillLastDigits(c, n.Count - 1);
-            q = MUL(q, m);
-            q = KillLastDigits(q, n.Count + 1);
-            q = MUL(q, n);
-            c = SUB(c, q);
-            while (LongCmp(c, n) != -1)
-                c = SUB(c, n);
-            return c;
-        }
+            if (IsZero(a) || IsZero(b))
+                return new BigInt();
+            uint[] resultData = new uint[a._data.Length + b._data.Length];
 
-        public List<int> MUL(List<int> p, List<int> q)
-        {
-            p = LongSameSize(p, q.Count);
-            q = LongSameSize(q, p.Count);
-            List<int> c = new List<int>();
-            List<int> temp = new List<int>();
-            for (int i = 0; i < p.Count; i++)
+            for (int i = 0; i < a._data.Length; i++)
             {
-                temp = LongMulOneDigit(p, q[i]);
-                temp = LongShiftDigitsToHight(temp, i);
-                c = LongSameSize(c, temp.Count);
-                temp = LongSameSize(temp, c.Count);
-                c = ADD(c, temp);
-            }
-            p = TrueSize(p);
-            q = TrueSize(q);
-            return TrueSize(c);
-        }
-
-        public List<int> DIV(List<int> a, List<int> b)
-        {
-            List<int> c = new List<int>();
-            int t, k = b.Count;
-            List<int> q = new List<int>(new int[a.Count]);
-            while (LongCmp(a, b) != -1)
-            {
-                t = a.Count;
-                c = LongShiftDigitsToHight(b, t - k);
-                if (LongCmp(a, c) == -1)
+                ulong carry = 0;
+                for (int j = 0; j < b._data.Length; j++)
                 {
-                    t--;
-                    c = LongShiftDigitsToHight(b, t - k);
+                    ulong product = (ulong)a._data[i] * b._data[j] + resultData[i + j] + carry;
+                    resultData[i + j] = (uint)(product);
+                    carry = product >> 32;
                 }
-                a = SUB(a, c);
-                q[t - k]++;
+                resultData[i + b._data.Length] = (uint)carry;
             }
-            return TrueSize(q);
+            return Trim(new BigInt(resultData));
         }
 
-        public List<int> POWMOD(List<int> e, List<int> bin, List<int> n)
+        public static (BigInt Quotient, BigInt Remainder) DivMod(BigInt a, BigInt b)
         {
-            List<int> m = LongM(n);
-            List<int> a = e.ToList();
-            List<int> c = new List<int> { 1 };
-            string b = LongBin(bin);
-            for (int i = 0; i < b.Length; i++)
+            if (IsZero(b))
+                throw new DivideByZeroException();
+            if (Compare(a, b) < 0)
+                return (new BigInt(), a);
+
+            BigInt quotient = new BigInt();
+            BigInt remainder = new BigInt();
+
+            int bitCount = a._data.Length * 32;
+            for (int i = bitCount; i >= 0; i--)
             {
-                if (b[i] == '1')
+                remainder <<= 1;
+                if (GetBit(a, i))
+                    remainder._data[0] |= 1;
+                if (Compare(remainder, b) >= 0)
                 {
-                    c = MUL(c, a);
-                    TrueSize(a);
-                    TrueSize(c);
-                    c = MOD(c, n);
-                    TrueSize(c);
+                    remainder -= b;
+                    quotient = SetBit(quotient, i);
                 }
-                a = MUL(a, a);
-                a = MOD(a, n);
-                TrueSize(a);
             }
-            return c;
+            return (Trim(quotient), Trim(remainder));
         }
 
-        //допоміжні функції
+        public static BigInt operator /(BigInt a, BigInt b) => DivMod(a, b).Quotient;
 
-        private List<int> LongMulOneDigit(List<int> a, int b)
+        public static BigInt operator %(BigInt a, BigInt b) => DivMod(a, b).Remainder;
+
+        public static BigInt PowMod(BigInt @base, BigInt exponent, BigInt modulus)
         {
-            int size = a.Count;
-            List<int> c = new List<int>();
-            uint temp = 0, carry = 0;
-            uint a1, b1;
-            for (int i = 0; i < size; i++)
+            if (IsZero(modulus))
+                throw new DivideByZeroException();
+
+            BigInt result = FromHex("1");
+            BigInt b = @base % modulus;
+            BigInt e = exponent;
+
+            while (!IsZero(e))
             {
-                a1 = Convert.ToUInt32(a[i]);
-                b1 = Convert.ToUInt32(b);
-                temp = a1 * b1 + carry;
-                c.Add(Convert.ToInt32(temp & (bt - 1)));
-                carry = temp >> w;
+                if (GetBit(e, 0))
+                    result = (result * b) % modulus;
+                b = (b * b) % modulus;
+                e >>= 1;
             }
-            c.Add(Convert.ToInt32(carry));
-            return TrueSize(c);
+            return result;
         }
 
-        private string LongBin(List<int> list)
+        // Implementation of helper methods
+
+        public static int Compare(BigInt a, BigInt b)
         {
-            string s = getHex(list);
-            string b = "";
-            string temp = "";
-            for (int i = 0; i < s.Length; i++)
+            if (a._data.Length != b._data.Length)
+                return a._data.Length.CompareTo(b._data.Length);
+            for (int i = a._data.Length - 1; i >= 0; i--)
             {
-                temp = "" + s[i];
-                temp = Convert.ToString(Convert.ToInt32(temp, 16), 2);
-                while (temp.Length < 4) temp = "0" + temp;
-                b = b + temp;
+                if (a._data[i] != b._data[i])
+                    return a._data[i].CompareTo(b._data[i]);
             }
-            b = new string(b.Reverse().ToArray());
-            return b;
+            return 0;
         }
 
-        private int LongCmp(List<int> a, List<int> b)
+        private static BigInt Trim(BigInt a)
         {
-            if (a.Count > b.Count)
-                return 1;
-            else if (b.Count > a.Count)
-                return -1;
-            int i = a.Count - 1;
-            while (a[i] == b[i])
+            int lastNonZeroIndex = a._data.Length - 1;
+            while (lastNonZeroIndex > 0 && a._data[lastNonZeroIndex] == 0)
             {
-                if (i == 0)
-                    return 0;
-                i -= 1;
+                lastNonZeroIndex--;
             }
-            if (a[i] > b[i])
-                return 1;
-            else
-                return -1;
+            if (lastNonZeroIndex == a._data.Length - 1)
+                return a;
+            uint[] trimmed = new uint[lastNonZeroIndex + 1];
+            Array.Copy(a._data, trimmed, lastNonZeroIndex + 1);
+            return new BigInt(trimmed);
         }
 
-        private List<int> LongM(List<int> n)
+        public static bool IsZero(BigInt a) => a._data.Length == 0 || (a._data.Length == 1 && a._data[0] == 0);
+
+        private static bool GetBit(BigInt a, int bitIndex)
         {
-            int k = n.Count;
-            List<int> temp = new List<int> { 1 };
-            List<int> m = LongShiftDigitsToHight(temp, 2 * k);
-            m = DIV(m, n);
-            return m;
+            int blockIndex = bitIndex / 32;
+            if (blockIndex >= a._data.Length)
+                return false;
+            uint bitMask = 1u << (bitIndex % 32);
+            return (a._data[blockIndex] & bitMask) != 0;
         }
 
-        private List<int> KillLastDigits(List<int> a, int i)
+        private static BigInt SetBit(BigInt a, int bitIndex)
         {
-            List<int> p = a.ToList();
-            if (p.Count > i)
-                p.RemoveRange(0, i);
-            else
+            int blockIndex = bitIndex / 32;
+            uint[] data = a._data;
+            if (blockIndex >= data.Length)
             {
-                p.Clear();
-                p.Add(0);
+                Array.Resize(ref data, blockIndex + 1);
             }
-            return p;
-        }
-
-        private List<int> TrueSize(List<int> c)
-        {
-            c.Reverse();
-            while (c.Count != 1 && c[0] == 0)
-                c.RemoveAt(0);
-            c.Reverse();
-            return c;
-        }
-
-        private List<int> LongShiftDigitsToHight(List<int> b, int i)
-        {
-            List<int> c = b.ToList();
-            for (int j = 0; j < i; j++)
-                c.Insert(0, 0);
-            return c;
-        }
-
-        private List<int> LongSameSize(List<int> a, int size)
-        {
-            for (int i = a.Count; i < size; i++)
-                a.Add(0);
-            return a;
+            data[blockIndex] |= 1u << (bitIndex % 32);
+            return new BigInt(data);
         }
     }
 }
