@@ -24,11 +24,13 @@ class MyConsole(cmd.Cmd):
   def do_gen_keys(self, arg):
     """Generates private and public key pair."""
     try:
+      if self.p == None or self.g == None:
+        print("❌Error: Ensure parameters are generated.")
       a, b = generate_key_pair(self.p, self.g)
       print("Private key (a): ", hex(a))
       print("Public key (b): ", hex(b))
-    except ValueError:
-      print("❌Error: Something went wrong. Ensure parameters are generated.")
+    except Exception as e:
+      print(f"❌Error: {e}.")
 
   def do_sign(self, arg):
     """Signs a message using the private key."""
