@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/ElGamalCryptoTool/ElGamalCryptoTool.csproj" />
+  <Project Path="tests/ElGamalCryptoTool.Tests/ElGamalCryptoTool.Tests.csproj" Id="11d78e80-3478-44c0-a8e3-ace6a3d209c9" />
 </Solution>

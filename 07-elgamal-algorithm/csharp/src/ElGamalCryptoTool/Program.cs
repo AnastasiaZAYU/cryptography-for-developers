@@ -1,19 +1,29 @@
-﻿namespace ElGamalCryptoTool
+﻿using System.Numerics;
+using System.Runtime.CompilerServices;
+
+namespace ElGamalCryptoTool
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            var service = new ElGamalService();
-            var paramsResult = service.GenerateParameters(1024);
+            var _service = new ElGamalService();
 
-            Console.WriteLine($"P: {paramsResult.P.ToString("X")}");
-            Console.WriteLine($"G: {paramsResult.G.ToString("X")}");
+            var parameters = _service.GenerateParameters(3072);
+            Console.WriteLine(parameters);
 
-            var keyPair = service.GenerateKeyPair(paramsResult);
+            var keys = _service.GenerateKeyPair(parameters);
+            Console.WriteLine(keys);
 
-            Console.WriteLine($"Private Key: {keyPair.PrivateKey.ToString("X")}");
-            Console.WriteLine($"Public Key: {keyPair.PublicKey.ToString("X")}");
+            string originalMessage = "The quick brown fox jumps over the lazy dog.";
+
+            var signature = _service.Sign(originalMessage, parameters, keys.PrivateKey);
+            bool isValid = _service.Verify(originalMessage, signature, parameters, keys.PublicKey);
+            Console.WriteLine($"Signature valid: {isValid}\n");
+
+            var cipher = _service.Encrypt(originalMessage, parameters, keys.PublicKey);
+            string decrypted = _service.Decrypt(cipher, parameters, keys.PrivateKey);
+            Console.WriteLine($"Decrypted text: {decrypted}\n");
         }
     }
 }
