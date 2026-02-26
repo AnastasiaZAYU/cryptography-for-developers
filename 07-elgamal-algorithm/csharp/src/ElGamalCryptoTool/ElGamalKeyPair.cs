@@ -15,5 +15,8 @@ namespace ElGamalCryptoTool
             PrivateKey = privateKey;
             PublicKey = publicKey;
         }
+
+        public override string ToString() =>
+            $"Private Key: 0x{PrivateKey.ToString("X")}\nPublic Key: 0x{PublicKey.ToString("X")}\n";
     }
 }

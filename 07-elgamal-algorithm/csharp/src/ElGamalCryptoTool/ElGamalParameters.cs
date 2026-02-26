@@ -15,5 +15,8 @@ namespace ElGamalCryptoTool
             P = p;
             G = g;
         }
+
+        public override string ToString() => 
+            $"P: 0x{P.ToString("X")}\nG: 0x{G.ToString("X")}\n";
     }
 }
