@@ -1,5 +1,8 @@
 # ElGamal Cryptosystem (Python Implementation)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Language: Python](https://img.shields.io/badge/Language-Python-3776AB.svg)](https://www.python.org/)
+
 This directory contains a complete Python implementation of the ElGamal cryptosystem, featuring both **Digital Signature** and **Asymmetric Encryption** with automatic message blocking.
 
 ## ⚡ Key Features
