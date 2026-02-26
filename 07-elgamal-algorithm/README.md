@@ -1,44 +1,52 @@
-# Практичне завдання: «Алгоритм Ель-Гамаля. Цифровий підпис. Спрямоване шифрування»
+# ElGamal Cryptosystem Implementation
 
-**Завдання:**
-1. Власна реалізація цифрового підпису.
-2. Власна реалізація спрямованого шифрування.
-3. Перевірка коректності реалізації.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Деталі реалізації:**
-Програма складається з трьох файлів:
-1. ElGamal.ipynb -- блокнот для запуску консолі та роботи з функціями.
-2. my_functions.py -- файл з кодом, де реалізовані всі функції:
-    1. generate_parameters(size) -- генерує параметри алгоритму p і g;
-    2. generate_key_pair() -- генерує ключому пару;
-    3. sign(message, a) -- створює підпис повідомлення;
-    4. verify(message, r, s, b) -- перевіряє підпис;
-    5. encrypt(message, b) -- шифрує повідомлення;
-    6. decrypt(x, y, a) -- розшифровує повідомлення;
-    7. can_modinv(k, p) -- перевіряє існування оберненого елемента за модулем;
-    8. split_message(message, block_size, state) -- розбиває повідомлення на блоки.
-3. my_console.py -- файл з кодом для роботи консолі.
+This directory contains a cross-platform implementation of the **ElGamal Cryptosystem** in Python and C#. The project demonstrates the two primary applications of the algorithm: **Digital Signatures** and **Asymmetric Encryption**.
 
-**Інструкція щодо запуску програми:**
-1. Відкрити файл "ElGamal.ipynb" та перейти за посилання у Colaboretory.
-2. Завантажити файли my_console.py та my_functions.py.
-3. Підключити необхідні бібліотеки (перша клітинка).
-4. Запустити наступну клітинку, щоб відкрилася консоль.
-5. Далі виконуйте команди згідно з інструкціями.
+## 📌 Overview
 
-**Перевірка коректності реалізації:**
-Приклад визову та роботи з програмою наведений у файлі ElGamal.ipynb:
-1. Виклик функцій підпису і перевірка зі згенерованими ключами для тестового повідомлення:
+The ElGamal algorithm is an asymmetric key encryption scheme based on the **Diffie-Hellman key exchange**. Its security relies on the difficulty of computing **discrete logarithms** in a large finite field.
 
-"This message is to verify the corectness of the El Gamal digital signature algorithm.".
+### Key Components:
+1. **Parameter Generation**: Selection of a large prime $p$ and a generator $g$ of the multiplicative group $\mathbb{Z}_p^*$.
+2. **Key Generation**: Creating a private key $x$ and a corresponding public key $y = g^x \pmod p$.
+3. **Digital Signature**: Creating a pair $(r, s)$ that proves the authenticity of a message.
+4. **Encryption**: Transforming a message into a pair $(c_1, c_2)$ using the recipient's public key.
 
-При першому виклику функції verify() всі дані були коректними, тож було отримано відповідь "True".
+## 📁 Repository Structure
 
-При другому виклику функції verify було змінено одне слово у повідомленні "This" -> "That", тож алгоритм перевірки підпису повернув "false".
-2. Виклик функції ширфування для повідомлення:
+The project is divided into two independent implementations, each following the best practices of its respective ecosystem:
 
-"This message is intended to test the functionality of the encryption and decryption functions of the El-Gamal algorithm. Please note that this message is very long. The length of this message is 263 bytes, while the length of the module is 256 bytes or 2048 bits."
+### 🐍 [Python Implementation](./python)
+- **Focus**: Rapid prototyping and interactive testing.
+- **Features**: Jupyter Notebook (Google Colab) support, `pycryptodome` integration, and a lightweight CLI.
 
-При виклику функції розшифрування програма повернула те саме повідомлення. Варто зазначити, що дане повідомлення довже за довжину модуля, тож алгоритм шифрував та розшифровував його по блоках.
+### ⚡ [C# Implementation](./csharp)
+- **Focus**: Robustness, performance, and industrial-grade architecture.
+- **Features**: Custom Miller-Rabin primality test, .NET 10, xUnit testing suite, and strong type safety.
 
-Отже, всі функції працюють коректно.
+## ⚙️ Feature Comparison
+
+| Feature | 🐍 Python | ⚡ C# |
+| :--- | :--- | :--- |
+| **Prime Generation** | PyCryptodome (`getPrime`) | Custom Miller-Rabin |
+| **Big Number Support** | Native Python `int` | `System.Numerics.BigInteger` |
+| **Message Blocking** | Manual byte-slicing | Big-endian byte management |
+| **Hashing** | SHA-256 (`hashlib`) | SHA-256 (`System.Security`) |
+| **Interface** | Google Colab / CLI | Console App / API |
+| **Unit Testing** | Inline automated tests | xUnit Framework |
+
+## 🛠 Mathematical Foundation
+The implementation ensures the following mathematical properties:
+- **Signature Verification**: $g^M \equiv y^r \cdot r^s \pmod p$
+- **Decryption**: $M = c_2 \cdot (c_1^x)^{-1} \pmod p$
+
+## 🚀 Quick Start
+To explore a specific implementation, navigate to its directory and follow the local `README.md` instructions:
+1. **For Python**: Go to [/python](./python) to run the Colab notebook.
+2. **For C#**: Go to [/csharp](./csharp) to open the `.slnx` solution in Visual Studio.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
