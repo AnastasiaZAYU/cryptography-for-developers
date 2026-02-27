@@ -1,14 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-
-namespace Digital_Signature
+﻿namespace ECDSACore
 {
-    class Program
+    internal class Program
     {
         static void Main(string[] args)
         {
@@ -61,6 +53,7 @@ namespace Digital_Signature
                         break;
                 }
             }
+
         }
     }
 }
