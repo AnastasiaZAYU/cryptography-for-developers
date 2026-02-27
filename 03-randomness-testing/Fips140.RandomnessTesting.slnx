@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/Fips140.RandomnessTesting/Fips140.RandomnessTesting.csproj" />
+  <Project Path="tests/Fips140.Tests/Fips140.Tests.csproj" Id="d60b10b9-305c-4271-8273-5fa19f4a35ed" />
 </Solution>

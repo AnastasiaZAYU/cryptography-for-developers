@@ -1,6 +1,4 @@
-﻿using KeyRandomnessValidator;
-
-namespace Fips140.RandomnessTesting
+﻿namespace Fips140.RandomnessTesting
 {
     internal class Program
     {

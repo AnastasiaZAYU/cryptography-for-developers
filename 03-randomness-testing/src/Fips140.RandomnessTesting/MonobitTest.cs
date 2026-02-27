@@ -19,7 +19,7 @@ namespace Fips140.RandomnessTesting
             {
                 onesCount += BitOperations.PopCount(b);
             }
-            return onesCount > 9654 && onesCount < 10346;
+            return onesCount >= 9654 && onesCount <= 10346;
         }
     }
 }
