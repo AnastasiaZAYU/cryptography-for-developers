@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/EllipticCurveWrapper/EllipticCurveWrapper.csproj" />
+  <Project Path="tests/EllipticCurveWrapper.Tests/EllipticCurveWrapper.Tests.csproj" Id="73179008-bfc5-4da9-b020-88b11636bf01" />
+</Solution>
