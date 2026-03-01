@@ -1,59 +1,31 @@
-﻿namespace ECDSACore
+﻿using ECDSACore.Infrastructure;
+
+namespace ECDSACore
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            ECDSA ecdsa = new ECDSA();
-            bool prog = true;
-            int r = 0;
-            string message;
-            AsymmetricKeyParameter sk, pk;
-            while (prog == true)
-            {
-                Console.WriteLine("Натиснiть “0” - щоб згенерувати пару ключiв;" +
-                    "\nнатиснiть “1” - щоб отримати геш повiдомлення;" +
-                    "\nнатиснiть “2” - щоб пiдписати повiдомлення;" +
-                    "\nнатиснiть “3” - щоб перевiрити пiдпис повiдомлення;" +
-                    "\nнатиснiсть будь-який iнший символ - щоб завершити роботу.");
-                r = int.Parse(Console.ReadLine());
-                switch (r)
-                {
-                    case 0:
-                        (sk, pk) = ecdsa.KeyGen();
-                        Console.WriteLine(ecdsa.ConvertToPEM(sk));
-                        Console.WriteLine(ecdsa.ConvertToPEM(pk));
-                        break;
-                    case 1:
-                        Console.Write("Введiть повiдомлення: ");
-                        message = Console.ReadLine();
-                        var hash = ecdsa.Hash(message);
-                        Console.WriteLine("Геш: {0}", Convert.ToBase64String(hash));
-                        break;
-                    case 2:
-                        Console.Write("Введiть повiдомлення: ");
-                        message = Console.ReadLine();
-                        Console.Write("Введiть приватний ключ: ");
-                        sk = ecdsa.InputKey();
-                        var signature = ecdsa.Sign(message, sk);
-                        Console.WriteLine("Signature: {0}", Convert.ToBase64String(signature));
-                        break;
-                    case 3:
-                        Console.Write("Введiть повiдомлення: ");
-                        message = Console.ReadLine();
-                        Console.Write("Введiть вiдкритий ключ: ");
-                        pk = ecdsa.InputKey();
-                        Console.Write("Введiть пiдпис: ");
-                        signature = Convert.FromBase64String(Console.ReadLine());
-                        var valid = ecdsa.Verify(message, signature, pk);
-                        Console.WriteLine(valid.ToString());
-                        break;
-                    default:
-                        prog = false;
-                        break;
-                }
-            }
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+            var ecService = new BouncyCastleWrapper();
+            var hashService = new Sha256HashService();
+            var ecdsa = new EcdsaService(ecService, hashService);
+
+            Console.WriteLine("======= ECDSA Digital Signature Demo  =======");
+                
+            var (privateKey, publicKey) = ecdsa.GenerateKeyPair();
+            string message = "The quick brown fox jumps over the lazy dog!";
+
+            var (r, s) = ecdsa.Sign(message, privateKey);
+            string signature = ecdsa.SerializeSignature(r, s);
+
+            Console.WriteLine($"\nMessage: {message}");
+            Console.WriteLine($"Public Key: {ecService.ECPointToString(publicKey)}");
+            Console.WriteLine($"Signature: {signature}");
+            
+            bool isValid = ecdsa.Verify(message, r, s, publicKey);
+            Console.WriteLine($"\nVerification result: {(isValid ? "SUCCESS" : "FAILED")}");            
         }
     }
 }
