@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/ECDSACore/ECDSACore.csproj" />
+  <Project Path="tests/ECDSACore.Tests/ECDSACore.Tests.csproj" Id="a19b18ff-8d43-49d5-94bb-0d9600930e99" />
 </Solution>
